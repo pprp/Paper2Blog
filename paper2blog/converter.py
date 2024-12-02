@@ -14,27 +14,18 @@ class PaperConverter:
     async def convert_from_pdf(
         self, pdf_path: str, target_language: str = "en"
     ) -> ConversionResponse:
-        """Convert PDF to blog post."""
+        """Convert PDF to blog post"""
         try:
-            with open(pdf_path, "rb") as f:
-                pdf_content = f.read()
+            # Extract content from PDF using the file path directly
+            text_content, images, tables = extract_content_from_pdf(pdf_path)
 
-            # Extract text, images, and tables from PDF
-            text_content, images, tables = extract_content_from_pdf(pdf_content)
-
-            # Format tables to markdown
+            # Format tables to markdown if any
             table_markdowns = [format_table_to_markdown(table) for table in tables]
 
             # Combine all content
             full_content = text_content
-
-            # Add images
-            for img in images:
-                full_content += f"\n\n{img.markdown}\n"
-
-            # Add tables
-            for table_md in table_markdowns:
-                full_content += f"\n\n{table_md}\n"
+            if table_markdowns:
+                full_content += "\n\n" + "\n\n".join(table_markdowns)
 
             try:
                 # Generate blog post using LLM
@@ -50,10 +41,9 @@ class PaperConverter:
                         summary=blog_post.get("summary", ""),
                         language=target_language,
                         images=images,
-                        tags=blog_post.get("tags", []),
                     )
                 elif isinstance(blog_post, BlogPost):
-                    # Handle BlogPost model response
+                    # Handle BlogPost response
                     return ConversionResponse(
                         title=blog_post.title,
                         content=blog_post.content,

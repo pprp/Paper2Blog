@@ -32,21 +32,13 @@ def extract_content_from_pdf(
         - List of pandas DataFrames for tables (currently not supported by marker API)
     """
     try:
-        # Prepare request to marker API
-        post_data = {
-            "filepath": pdf_path,
-        }
-        
-        headers = {"Content-Type": "application/json"}
-        response = requests.post(
-            "http://localhost:8024/marker",
-            data=json.dumps(post_data),
-            headers=headers
-        )
-        response.raise_for_status()
-        
-        # Parse response
-        result = response.json()
+        # Simple API call matching test_marker_api.py
+        post_data = {"filepath": pdf_path}
+        breakpoint()
+        result = requests.post(
+            "http://localhost:8024/marker", data=json.dumps(post_data)
+        ).json()
+
         if not result.get("success"):
             print("Marker API failed to process PDF")
             return "", [], []
@@ -55,26 +47,30 @@ def extract_content_from_pdf(
         text_content = ""
         if extract_text:
             text_content = result.get("output", "")
-            
+
         # Process images if requested
         images = []
         if extract_images and "images" in result:
             # Get first max_images from the images dict
             image_items = list(result["images"].items())[:max_images]
-            
+
             for idx, (image_name, image_data) in enumerate(image_items):
                 try:
                     # Generate caption from image name
                     # Remove prefix like '_page_1_' and file extension
-                    caption = image_name.split('_', 3)[-1].rsplit('.', 1)[0]
-                    
+                    caption = image_name.split("_", 3)[-1].rsplit(".", 1)[0]
+
                     # Save image temporarily
                     temp_path = os.path.join("./tmp", image_name)
                     os.makedirs(os.path.dirname(temp_path), exist_ok=True)
-                    
+
                     # Image data is already in bytes, no need for base64 decode
                     with open(temp_path, "wb") as f:
-                        f.write(image_data)
+                        f.write(
+                            image_data.encode()
+                            if isinstance(image_data, str)
+                            else image_data
+                        )
 
                     # Create ImageInfo object
                     image_info = ImageInfo(

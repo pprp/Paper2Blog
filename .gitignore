@@ -3,3 +3,4 @@ paper2blog.egg-info/*
 *.pyc
 *.pdf
 paper2blog/__pycache__/*
+paper2blog/__pycache__/*.pyc
