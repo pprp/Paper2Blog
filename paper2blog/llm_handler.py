@@ -313,6 +313,20 @@ Your writing style:
             print(f"Error in LLMHandler: {str(e)}")
             raise Exception(f"Failed to generate blog content: {str(e)}")
 
+    async def _save_pdf_to_tmp(self, pdf_bytes: bytes, filename: str) -> str:
+        tmp_dir = "./tmp/uploaded_files"
+        os.makedirs(tmp_dir, exist_ok=True)
+        file_path = os.path.join(tmp_dir, filename)
+        with open(file_path, "wb") as f:
+            f.write(pdf_bytes)
+        return file_path
+
+    async def process_pdf(
+        self, pdf_bytes: bytes, filename: str, target_language: str = "en"
+    ):
+        pdf_path = await self._save_pdf_to_tmp(pdf_bytes, filename)
+        return await self.paper_converter.convert_from_pdf(pdf_path, target_language)
+
     def _format_images(self, images: List[ImageInfo]) -> str:
         formatted_images = []
         for idx, img in enumerate(images, 1):

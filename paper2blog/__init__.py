@@ -12,7 +12,7 @@ __version__ = "0.1.0"
 
 from .converter import PaperConverter
 from .models import ConversionResponse, ImageInfo, BlogPost
-from .utils import extract_content_from_pdf, format_table_to_markdown
+from .utils import extract_content_from_pdf
 
 __all__ = [
     "PaperConverter",
@@ -20,5 +20,4 @@ __all__ = [
     "ImageInfo",
     "BlogPost",
     "extract_content_from_pdf",
-    "format_table_to_markdown",
 ]

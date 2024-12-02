@@ -78,7 +78,7 @@ async def test_image_extraction(create_test_pdf_with_image):
         pdf_content = f.read()
 
     # Extract content
-    text_content, images, tables = extract_content_from_pdf(pdf_content)
+    text_content, images = extract_content_from_pdf(pdf_content)
 
     # Verify image extraction
     assert len(images) > 0, "No images were extracted"
@@ -128,7 +128,7 @@ async def test_image_quality_filtering(create_test_pdf_with_image):
     with open(pdf_path, "rb") as f:
         pdf_content = f.read()
 
-    text_content, images, tables = extract_content_from_pdf(pdf_content)
+    text_content, images, _ = extract_content_from_pdf(pdf_content)
 
     # Small image should be filtered out
     assert len(images) == 0, "Small, low quality image should be filtered out"
@@ -182,7 +182,7 @@ async def test_invalid_image_handling():
         pdf_content = f.read()
 
     # Should not raise exception for corrupted images
-    text_content, images, tables = extract_content_from_pdf(pdf_content)
+    text_content, images, _ = extract_content_from_pdf(pdf_content)
     assert len(images) == 0, "Corrupted images should be filtered out"
 
 
@@ -191,7 +191,7 @@ def test_cleanup_temp_files(create_test_pdf_with_image):
     with open(create_test_pdf_with_image, "rb") as f:
         pdf_content = f.read()
 
-    text_content, images, tables = extract_content_from_pdf(pdf_content)
+    text_content, images, _ = extract_content_from_pdf(pdf_content)
 
     # Store image paths
     image_paths = [img.url for img in images]
@@ -204,3 +204,20 @@ def test_cleanup_temp_files(create_test_pdf_with_image):
     # For testing, we just verify the files are in the expected temporary location
     for path in image_paths:
         assert path.startswith("./tmp/"), "Image files should be in temporary directory"
+
+
+@pytest.mark.asyncio
+async def test_convert_from_pdf():
+    """Test converting PDF to blog post"""
+    converter = PaperConverter()
+
+    # Test with a real PDF file
+    result = await converter.convert_from_pdf(
+        "/Users/peyton/Workspace/Paper2Blog/tests/data/sample.pdf", target_language="en"
+    )
+
+    assert isinstance(result, ConversionResponse)
+    assert result.language == "en"
+    assert isinstance(result.images, list)
+    assert all(isinstance(img, ImageInfo) for img in result.images)
+    assert not result.error  # No error should be present

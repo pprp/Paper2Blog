@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import requests
 from .llm_handler import LLMHandler
 from .models import ConversionResponse, ImageInfo, BlogPost
-from .utils import extract_content_from_pdf, format_table_to_markdown, download_image
+from .utils import extract_content_from_pdf, download_image
 
 
 class PaperConverter:
@@ -17,20 +17,12 @@ class PaperConverter:
         """Convert PDF to blog post"""
         try:
             # Extract content from PDF using the file path directly
-            text_content, images, tables = extract_content_from_pdf(pdf_path)
-
-            # Format tables to markdown if any
-            table_markdowns = [format_table_to_markdown(table) for table in tables]
-
-            # Combine all content
-            full_content = text_content
-            if table_markdowns:
-                full_content += "\n\n" + "\n\n".join(table_markdowns)
+            text_content, images = extract_content_from_pdf(pdf_path)
 
             try:
                 # Generate blog post using LLM
                 blog_post = await self.llm_handler.generate_blog_post(
-                    full_content, target_language=target_language
+                    text_content, target_language=target_language
                 )
 
                 if isinstance(blog_post, dict):
