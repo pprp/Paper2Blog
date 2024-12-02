@@ -2,3 +2,4 @@
 paper2blog.egg-info/*
 *.pyc
 *.pdf
+paper2blog/__pycache__/*
