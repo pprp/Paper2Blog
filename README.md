@@ -29,6 +29,51 @@ A modern web application that transforms academic papers into engaging blog post
 - **Markdown Rendering**: react-markdown
 - **Styling**: CSS-in-JS with MUI theme
 
+## Installation 🚀
+
+### From Source
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/paper2blog.git
+cd paper2blog
+
+# Create and activate a virtual environment (optional but recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install the package in development mode
+pip install -e ".[dev]"
+```
+
+### Using pip (when published)
+```bash
+pip install paper2blog
+```
+
+## Development Setup 🛠️
+
+1. **Install Development Dependencies**
+   ```bash
+   pip install -e ".[dev]"
+   ```
+
+2. **Run Tests**
+   ```bash
+   pytest
+   ```
+
+3. **Code Formatting**
+   ```bash
+   # Format code
+   black .
+   
+   # Sort imports
+   isort .
+   
+   # Check style
+   flake8
+   ```
+
 ## Setup 🚀
 
 1. **Clone the Repository**
@@ -72,7 +117,11 @@ A modern web application that transforms academic papers into engaging blog post
    ```
 
 5. **Access the Application**
+
    - Open [http://localhost:3000](http://localhost:3000) in your browser
+
+6. **Marker Server**
+   - Start the marker server with `marker_server --port 8024`
 
 ## Environment Variables 🔑
 

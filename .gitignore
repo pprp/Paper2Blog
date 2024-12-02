@@ -1,1 +1,4 @@
 .env
+paper2blog.egg-info/*
+*.pyc
+*.pdf

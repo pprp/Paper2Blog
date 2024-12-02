@@ -1,16 +1,21 @@
-from pydantic import BaseModel
 from typing import List, Optional
+from pydantic import BaseModel
 
 class ImageInfo(BaseModel):
     caption: str
     url: str
     markdown: str
 
-class ConversionResponse(BaseModel):
+class BlogPost(BaseModel):
     title: str
     content: str
-    language: str
-    images: List[ImageInfo]
     summary: str
-    tags: List[str]
+
+class ConversionResponse(BaseModel):
+    title: Optional[str] = ""
+    content: Optional[str] = ""
+    summary: Optional[str] = ""
+    language: str
+    images: List[ImageInfo] = []
     error: Optional[str] = None
+    tags: List[str] = []

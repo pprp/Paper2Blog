@@ -1,82 +1,129 @@
 import io
 import os
-from typing import Union, List
-import PyPDF2
-import requests
 from bs4 import BeautifulSoup
-from .models import ConversionResponse, ImageInfo
+import requests
 from .llm_handler import LLMHandler
-from .vlm_handler import VLMHandler
-from .utils import extract_images_from_pdf, download_image
-
+from .models import ConversionResponse, ImageInfo, BlogPost
+from .utils import extract_content_from_pdf, format_table_to_markdown, download_image
 
 class PaperConverter:
     def __init__(self):
-        self.llm = LLMHandler()
-        self.vlm = VLMHandler()
+        self.llm_handler = LLMHandler()
 
     async def convert_from_pdf(
-        self, pdf_content: bytes, language: str
+        self, pdf_path: str, target_language: str = "en"
     ) -> ConversionResponse:
-        # Read PDF content
-        pdf_file = io.BytesIO(pdf_content)
-        reader = PyPDF2.PdfReader(pdf_file)
-        text_content = ""
-        for page in reader.pages:
-            text_content += page.extract_text()
+        """Convert PDF to blog post."""
+        try:
+            with open(pdf_path, "rb") as f:
+                pdf_content = f.read()
 
-        # Extract images
-        images = extract_images_from_pdf(pdf_content)
-        image_infos = []
+            # Extract text, images, and tables from PDF
+            text_content, images, tables = extract_content_from_pdf(pdf_content)
 
-        # Process images with VLM
-        for img in images:
-            caption = await self.vlm.generate_caption(img)
-            # Save image and get URL (implementation needed)
-            url = "./tmp"  # Placeholder
-            markdown = f"![{caption}]({url})"
-            image_infos.append(ImageInfo(caption=caption, url=url, markdown=markdown))
+            # Format tables to markdown
+            table_markdowns = [format_table_to_markdown(table) for table in tables]
 
-        # Generate blog content using LLM
-        blog_content = await self.llm.generate_blog(text_content, language, image_infos)
+            # Combine all content
+            full_content = text_content
 
-        return ConversionResponse(
-            title=blog_content["title"],
-            content=blog_content["content"],
-            language=language,
-            images=image_infos,
-            summary=blog_content["summary"],
-            tags=blog_content["tags"],
-        )
+            # Add images
+            for img in images:
+                full_content += f"\n\n{img.markdown}\n"
+
+            # Add tables
+            for table_md in table_markdowns:
+                full_content += f"\n\n{table_md}\n"
+
+            try:
+                # Generate blog post using LLM
+                blog_post = await self.llm_handler.generate_blog_post(
+                    full_content, target_language=target_language
+                )
+                
+                if isinstance(blog_post, dict):
+                    # Handle dictionary response
+                    return ConversionResponse(
+                        title=blog_post.get("title", ""),
+                        content=blog_post.get("content", ""),
+                        summary=blog_post.get("summary", ""),
+                        language=target_language,
+                        images=images,
+                        tags=blog_post.get("tags", []),
+                    )
+                elif isinstance(blog_post, BlogPost):
+                    # Handle BlogPost model response
+                    return ConversionResponse(
+                        title=blog_post.title,
+                        content=blog_post.content,
+                        summary=blog_post.summary,
+                        language=target_language,
+                        images=images,
+                    )
+                else:
+                    raise ValueError(f"Unexpected response type from LLM handler: {type(blog_post)}")
+                
+            except Exception as e:
+                return ConversionResponse(
+                    language=target_language,
+                    images=images,
+                    error=f"Error in LLM processing: {str(e)}"
+                )
+
+        except Exception as e:
+            return ConversionResponse(
+                language=target_language,
+                error=f"Error in PDF processing: {str(e)}"
+            )
 
     async def convert_from_url(self, url: str, language: str) -> ConversionResponse:
         # Download and parse webpage
         response = requests.get(url)
         soup = BeautifulSoup(response.text, "html.parser")
 
-        # Extract text content (implementation depends on source website structure)
+        # Extract text content
         text_content = soup.get_text()
 
-        # Extract images
+        # Extract and process images
         image_infos = []
         for img in soup.find_all("img"):
             img_url = img.get("src")
             if img_url:
                 img_data = download_image(img_url)
-                caption = await self.vlm.generate_caption(img_data)
-                markdown = f"![{caption}]({img_url})"
+                markdown = f"![{img.get('alt', '')}]({img_url})"
                 image_infos.append(
-                    ImageInfo(caption=caption, url=img_url, markdown=markdown)
+                    ImageInfo(caption=img.get("alt", ""), url=img_url, markdown=markdown)
                 )
 
-        # Generate blog content using LLM
-        blog_content = await self.llm.generate_blog(text_content, language, image_infos)
-
-        return ConversionResponse(
-            title=blog_content["title"],
-            content=blog_content["content"],
-            language=language,
-            images=image_infos,
-            summary=blog_content["summary"],
-            tags=blog_content["tags"],
-        )
+        try:
+            # Generate blog post using LLM
+            blog_post = await self.llm_handler.generate_blog_post(
+                text_content, target_language=language
+            )
+            
+            if isinstance(blog_post, dict):
+                return ConversionResponse(
+                    title=blog_post.get("title", ""),
+                    content=blog_post.get("content", ""),
+                    summary=blog_post.get("summary", ""),
+                    language=language,
+                    images=image_infos,
+                    tags=blog_post.get("tags", []),
+                )
+            elif isinstance(blog_post, BlogPost):
+                return ConversionResponse(
+                    title=blog_post.title,
+                    content=blog_post.content,
+                    summary=blog_post.summary,
+                    language=language,
+                    images=image_infos,
+                )
+            else:
+                raise ValueError(f"Unexpected response type from LLM handler: {type(blog_post)}")
+                
+        except Exception as e:
+            return ConversionResponse(
+                language=language,
+                images=image_infos,
+                error=f"Error in LLM processing: {str(e)}"
+            )
