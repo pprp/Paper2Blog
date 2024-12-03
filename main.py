@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from paper2blog.converter import PaperConverter
 from paper2blog.models import ConversionResponse
 import uvicorn
@@ -47,6 +48,13 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Mount static files directory for serving images
+app.mount(
+    "/tmp",
+    StaticFiles(directory="/Users/peyton/Workspace/Paper2Blog/tmp"),
+    name="static",
 )
 
 

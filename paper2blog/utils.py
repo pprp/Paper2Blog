@@ -59,16 +59,14 @@ def extract_content_from_pdf(
                     caption = image_name.split("_", 3)[-1].rsplit(".", 1)[0]
 
                     # Save image temporarily
-                    temp_path = os.path.join("./tmp", image_name)
+                    temp_path = os.path.join(
+                        "/Users/peyton/Workspace/Paper2Blog/tmp/saved_pngs", image_name
+                    )
                     os.makedirs(os.path.dirname(temp_path), exist_ok=True)
 
-                    # Image data is already in bytes, no need for base64 decode
+                    # Decode base64 string to bytes
                     with open(temp_path, "wb") as f:
-                        f.write(
-                            image_data.encode()
-                            if isinstance(image_data, str)
-                            else image_data
-                        )
+                        f.write(base64.b64decode(image_data))
 
                     # Create ImageInfo object
                     image_info = ImageInfo(
