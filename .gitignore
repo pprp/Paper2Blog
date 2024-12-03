@@ -5,3 +5,4 @@ paper2blog.egg-info/*
 paper2blog/__pycache__/*
 paper2blog/__pycache__/*.pyc
 tmp/*
+logs/*

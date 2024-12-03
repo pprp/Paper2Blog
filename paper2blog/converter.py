@@ -22,7 +22,7 @@ class PaperConverter:
             try:
                 # Generate blog post using LLM
                 blog_post = await self.llm_handler.generate_blog_post(
-                    text_content, target_language=target_language
+                    text_content, target_language=target_language, image_info=images
                 )
 
                 if isinstance(blog_post, dict):
