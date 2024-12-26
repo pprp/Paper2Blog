@@ -13,7 +13,7 @@ def extract_content_from_pdf(
     pdf_path: str,
     extract_text: bool = True,
     extract_images: bool = True,
-    max_images: int = 4,
+    max_images: int = 6,
 ) -> Tuple[str, List[ImageInfo]]:
     """
     Extract text and images from PDF using marker API
@@ -60,7 +60,7 @@ def extract_content_from_pdf(
 
                     # Save image temporarily
                     temp_path = os.path.join(
-                        "/Users/peyton/Workspace/Paper2Blog/tmp/saved_pngs", image_name
+                        "/home/dongpeijie/workspace/Paper2Blog/tmp/saved_pngs", image_name
                     )
                     os.makedirs(os.path.dirname(temp_path), exist_ok=True)
 

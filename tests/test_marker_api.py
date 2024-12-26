@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 post_data = {
-    "filepath": "/Users/peyton/Workspace/Paper2Blog/tests/data/sample.pdf",
+    "filepath": "/home/dongpeijie/workspace/Paper2Blog/tests/data/sample.pdf",
     # Add other params here
 }
 
@@ -17,7 +17,7 @@ print(_json["format"])  # markdown
 print(_json["output"])  # markdown content
 print(_json["metadata"])  # useless
 
-save_dir = Path("/Users/peyton/Workspace/Paper2Blog/tmp/saved_pngs")
+save_dir = Path("/home/dongpeijie/workspace/Paper2Blog/tmp/saved_pngs")
 save_dir.mkdir(parents=True, exist_ok=True)
 
 for img_name, img_data in _json["images"].items():

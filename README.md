@@ -96,6 +96,10 @@ pip install paper2blog
    # Set up environment variables
    cp .env.example .env
    # Edit .env with your OpenAI API key and other settings
+
+   OPENAI_API_KEY=**
+   OPENAI_API_BASE=**
+   OPEN_MODEL=gpt-4o-mini
    ```
 
 3. **Frontend Setup**

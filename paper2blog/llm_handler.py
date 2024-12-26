@@ -57,7 +57,7 @@ Just return the translated title without any additional text or formatting.""",
             # Define prompts based on language
             prompts = {
                 "zh": {
-                    "system": "你是一位专业的技术博主，擅长将学术论文转化为通俗易懂的技术博客。",
+                    "system": "你是一位专业的技术博主，擅长将学术论文转化为通俗易懂的技术博客。请用中文进行回复。",
                     "style": "保持技术准确性的同时确保可读性，突出创新点和实际应用价值。",
                 },
                 "en": {
@@ -129,7 +129,7 @@ Paper content:
         for idx, img in enumerate(images, 1):
             # Convert absolute path to relative URL path
             relative_path = os.path.relpath(
-                img.url, "/Users/peyton/Workspace/Paper2Blog"
+                img.url, "/home/dongpeijie/workspace/Paper2Blog"
             )
             # Format markdown with web-accessible URL
             formatted_images.append(

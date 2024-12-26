@@ -213,7 +213,7 @@ async def test_convert_from_pdf():
 
     # Test with a real PDF file
     result = await converter.convert_from_pdf(
-        "/Users/peyton/Workspace/Paper2Blog/tests/data/sample.pdf", target_language="en"
+        "/home/dongpeijie/workspace/Paper2Blog/tests/data/sample.pdf", target_language="en"
     )
 
     assert isinstance(result, ConversionResponse)

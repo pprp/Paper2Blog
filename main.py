@@ -32,11 +32,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Create temporary upload directory
-UPLOAD_DIR = Path("/Users/peyton/Workspace/Paper2Blog/tmp/uploaded_files")
+UPLOAD_DIR = Path("/home/dongpeijie/workspace/Paper2Blog/tmp/uploaded_files")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # Create directory for saving markdown files
-SAVED_MD_DIR = Path("/Users/peyton/Workspace/Paper2Blog/tmp/saved_md")
+SAVED_MD_DIR = Path("/home/dongpeijie/workspace/Paper2Blog/tmp/saved_md")
 SAVED_MD_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Paper2Blog API")
@@ -53,7 +53,7 @@ app.add_middleware(
 # Mount static files directory for serving images
 app.mount(
     "/tmp",
-    StaticFiles(directory="/Users/peyton/Workspace/Paper2Blog/tmp"),
+    StaticFiles(directory="/home/dongpeijie/workspace/Paper2Blog/tmp"),
     name="static",
 )
 
