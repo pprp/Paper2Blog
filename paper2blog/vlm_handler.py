@@ -1,40 +1,57 @@
+import aiohttp
+import base64
 from PIL import Image
 import io
-from transformers import VisionEncoderDecoderModel, ViTImageProcessor, AutoTokenizer
-import torch
 
 class VLMHandler:
     def __init__(self):
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.api_url = "https://api.siliconflow.cn/v1/chat/completions"
+        self.api_key = "sk-mxnvgvluhpyxjpuvjjfevflefhxykpgxvtrqubmvmsytrgbp"  # Consider moving this to environment variables
         
-        # Load the model and processor
-        self.model = VisionEncoderDecoderModel.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
-        self.feature_extractor = ViTImageProcessor.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
-        self.tokenizer = AutoTokenizer.from_pretrained("nlpconnect/vit-gpt2-image-captioning")
+    async def generate_caption(self, text_data: str, image_data: bytes) -> str:
+        # Convert image bytes to base64
+        image_base64 = base64.b64encode(image_data).decode('utf-8')
         
-        self.model.to(self.device)
-
-    async def generate_caption(self, image_data: bytes) -> str:
-        # Convert bytes to PIL Image
-        image = Image.open(io.BytesIO(image_data))
+        # Chunk the text data into smaller segments (approximately 2000 characters per chunk)
+        chunk_size = 2000
+        text_chunks = [text_data[i:i+chunk_size] for i in range(0, len(text_data), chunk_size)]
         
-        if image.mode != "RGB":
-            image = image.convert("RGB")
-            
-        # Prepare image for the model
-        pixel_values = self.feature_extractor(image, return_tensors="pt").pixel_values
-        pixel_values = pixel_values.to(self.device)
-
-        # Generate caption
-        output_ids = self.model.generate(
-            pixel_values,
-            max_length=16,
-            num_beams=4,
-            return_dict_in_generate=True,
-            early_stopping=True
-        )
-
-        # Decode the generated caption
-        caption = self.tokenizer.decode(output_ids.sequences[0], skip_special_tokens=True)
+        # Use the first chunk for context, as it's likely the most relevant
+        context_text = text_chunks[0] + "..." if len(text_chunks) > 1 else text_data
         
-        return caption
+        # Prepare the API payload with shortened context
+        payload = {
+            "model": "deepseek-ai/deepseek-vl2",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"Please describe this image concisely in the context of this excerpt: {context_text}. Please use Chinese and English both to describe the image with a short sentence like 'This is a figure of ...; 这幅图描述了...' and there should be not '\n' in the sentence"
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{image_base64}"
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        # Make async API request
+        async with aiohttp.ClientSession() as session:
+            async with session.post(self.api_url, json=payload, headers=headers) as response:
+                if response.status == 200:
+                    result = await response.json()
+                    return result['choices'][0]['message']['content']
+                else:
+                    error_text = await response.text()
+                    raise Exception(f"API request failed with status {response.status}: {error_text}")

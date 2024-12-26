@@ -7,9 +7,9 @@ from PIL import Image
 from typing import Tuple, List
 import json
 from .models import ImageInfo
+from .vlm_handler import VLMHandler
 
-
-def extract_content_from_pdf(
+async def extract_content_from_pdf(
     pdf_path: str,
     extract_text: bool = True,
     extract_images: bool = True,
@@ -29,14 +29,15 @@ def extract_content_from_pdf(
         - Extracted text (markdown format)
         - List of ImageInfo objects
     """
-    # try:
-    if True:
+    try:
         # Simple API call matching test_marker_api.py
         post_data = {"filepath": pdf_path}
         result = requests.post(
             "http://localhost:8024/marker", data=json.dumps(post_data)
         ).json()
-
+        
+        vlm_handler = VLMHandler()
+        
         if not result.get("success"):
             print("Marker API failed to process PDF")
             return "", []
@@ -54,9 +55,10 @@ def extract_content_from_pdf(
 
             for idx, (image_name, image_data) in enumerate(image_items):
                 try:
-                    # Generate caption from image name
-                    # Remove prefix like '_page_1_' and file extension
-                    caption = image_name.split("_", 3)[-1].rsplit(".", 1)[0]
+                    # Decode base64 string to bytes first
+                    image_bytes = base64.b64decode(image_data)
+                    # Generate caption from image name using decoded bytes
+                    caption = await vlm_handler.generate_caption(text_content, image_bytes)
 
                     # Save image temporarily
                     temp_path = os.path.join(
@@ -64,9 +66,9 @@ def extract_content_from_pdf(
                     )
                     os.makedirs(os.path.dirname(temp_path), exist_ok=True)
 
-                    # Decode base64 string to bytes
+                    # Write the already decoded bytes
                     with open(temp_path, "wb") as f:
-                        f.write(base64.b64decode(image_data))
+                        f.write(image_bytes)
 
                     # Create ImageInfo object
                     image_info = ImageInfo(
@@ -79,12 +81,10 @@ def extract_content_from_pdf(
                 except Exception as e:
                     print(f"Error processing image {image_name}: {e}")
                     continue
-
         return text_content, images
-
-    # except Exception as e:
-    #     print(f"Error extracting content from PDF: {e}")
-    #     return "", []
+    except Exception as e:
+        print(f"Error extracting content from PDF: {e}")
+        return "", []
 
 
 def download_image(url: str) -> bytes:

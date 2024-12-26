@@ -57,7 +57,7 @@ Just return the translated title without any additional text or formatting.""",
             # Define prompts based on language
             prompts = {
                 "zh": {
-                    "system": "你是一位专业的技术博主，擅长将学术论文转化为通俗易懂的技术博客。请用中文进行回复。",
+                    "system": "你是一位专业的技术博主，擅长将学术论文转化为通俗易懂的技术博客。请用中文进行回复。请尽可能多详细的描述这篇文章内容。同时请根据图片的描述以及论文内容，将图片安排到合适的位置，并且添加对应段落来描述图片。",
                     "style": "保持技术准确性的同时确保可读性，突出创新点和实际应用价值。",
                 },
                 "en": {
@@ -71,14 +71,8 @@ Just return the translated title without any additional text or formatting.""",
                 {"role": "system", "content": prompts[lang]["system"]},
                 {
                     "role": "user",
-                    "content": f"""Write a technical blog post about this paper following these guidelines:
+                    "content": f"""Write a technical blog post about this paper freely:
 {prompts[lang]["style"]}
-
-Structure:
-1. Introduction & Background
-2. Core Methodology
-3. Implementation Details
-4. Technical Insights
 
 Available Images:
 {self._format_images(images)}

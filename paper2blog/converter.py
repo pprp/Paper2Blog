@@ -17,7 +17,7 @@ class PaperConverter:
         """Convert PDF to blog post"""
         try:
             # Extract content from PDF using the file path directly
-            text_content, images = extract_content_from_pdf(pdf_path)
+            text_content, images = await extract_content_from_pdf(pdf_path)
 
             try:
                 # Generate blog post using LLM
