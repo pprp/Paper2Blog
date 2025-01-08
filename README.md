@@ -34,7 +34,7 @@ A modern web application that transforms academic papers into engaging blog post
 ### From Source
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/paper2blog.git
+git clone https://github.com/pprp/paper2blog.git
 cd paper2blog
 
 # Create and activate a virtual environment (optional but recommended)
