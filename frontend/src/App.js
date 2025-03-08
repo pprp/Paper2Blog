@@ -73,7 +73,7 @@ const theme = createTheme({
 
 function App() {
   const [file, setFile] = useState(null);
-  const [language, setLanguage] = useState('english');
+  const [language, setLanguage] = useState('chinese');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
@@ -216,9 +216,8 @@ function App() {
                 sx={{ minWidth: 200 }}
                 size="small"
               >
-                <MenuItem value="english">English</MenuItem>
                 <MenuItem value="chinese">Chinese</MenuItem>
-                <MenuItem value="spanish">Spanish</MenuItem>
+                <MenuItem value="english">English</MenuItem>
               </Select>
 
               <Button
