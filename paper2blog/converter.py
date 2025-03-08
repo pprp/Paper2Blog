@@ -20,7 +20,7 @@ class PaperConverter:
             text_content, images = await extract_content_from_pdf(pdf_path)
 
             try:
-                # Generate blog post using LLM
+                # Generate blog post using LLM in one shot
                 blog_post = await self.llm_handler.generate_blog_post(
                     text_content, target_language=target_language, image_info=images
                 )
@@ -30,7 +30,7 @@ class PaperConverter:
                     return ConversionResponse(
                         title=blog_post.get("title", ""),
                         content=blog_post.get("content", ""),
-                        summary=blog_post.get("summary", ""),
+                        summary="",  # Summary is now part of the content
                         language=target_language,
                         images=images,
                     )
@@ -39,7 +39,7 @@ class PaperConverter:
                     return ConversionResponse(
                         title=blog_post.title,
                         content=blog_post.content,
-                        summary=blog_post.summary,
+                        summary="",  # Summary is now part of the content
                         language=target_language,
                         images=images,
                     )
@@ -82,16 +82,16 @@ class PaperConverter:
                 )
 
         try:
-            # Generate blog post using LLM
+            # Generate blog post using LLM in one shot
             blog_post = await self.llm_handler.generate_blog_post(
-                text_content, target_language=language
+                text_content, target_language=language, image_info=image_infos
             )
 
             if isinstance(blog_post, dict):
                 return ConversionResponse(
                     title=blog_post.get("title", ""),
                     content=blog_post.get("content", ""),
-                    summary=blog_post.get("summary", ""),
+                    summary="",  # Summary is now part of the content
                     language=language,
                     images=image_infos,
                     tags=blog_post.get("tags", []),
@@ -100,7 +100,7 @@ class PaperConverter:
                 return ConversionResponse(
                     title=blog_post.title,
                     content=blog_post.content,
-                    summary=blog_post.summary,
+                    summary="",  # Summary is now part of the content
                     language=language,
                     images=image_infos,
                 )

@@ -1,15 +1,17 @@
 from typing import List, Optional
 from pydantic import BaseModel
 
+
 class ImageInfo(BaseModel):
     caption: str
     url: str
     markdown: str
 
+
 class BlogPost(BaseModel):
     title: str
     content: str
-    summary: str
+
 
 class ConversionResponse(BaseModel):
     title: Optional[str] = ""

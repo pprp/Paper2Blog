@@ -4,7 +4,7 @@ Paper2Blog - Convert academic papers to engaging blog posts
 This package provides tools to:
 1. Extract content from PDF papers
 2. Process and analyze the content
-3. Generate blog posts using AI
+3. Generate blog posts using AI in a one-shot approach
 4. Handle images and tables intelligently
 """
 

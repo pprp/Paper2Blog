@@ -2,7 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from paper2blog.converter import PaperConverter
-from paper2blog.models import ConversionResponse
+from paper2blog.types import ConversionResponse
 import uvicorn
 import traceback
 import logging

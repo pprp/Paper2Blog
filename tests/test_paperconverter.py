@@ -1,6 +1,6 @@
 import asyncio
 from paper2blog.converter import PaperConverter
-from paper2blog.models import ConversionResponse
+from paper2blog.types import ConversionResponse
 
 
 async def test_convert_from_pdf():

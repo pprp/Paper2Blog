@@ -46,76 +46,78 @@ Just return the translated title without any additional text or formatting.""",
         response = await self._generate_completion(messages)
         return response.strip()
 
-    async def generate_blog(
-        self, text_content: str, language: str, images: List[ImageInfo]
-    ) -> Dict:
-        """Generate a technical blog post from an academic paper."""
+    async def generate_blog_post(
+        self,
+        text_content: str,
+        target_language: str = "en",
+        image_info: List[ImageInfo] = [],
+    ):
+        """Generate a technical blog post from an academic paper in one shot."""
         try:
             # Determine language
-            lang = "zh" if language.lower() in ["zh", "chinese", "中文"] else "en"
+            lang = "zh" if target_language.lower() in ["zh", "chinese", "中文"] else "en"
+            
+            # Format images for inclusion in the prompt
+            formatted_images = self._format_images(image_info)
+            
+            # Define system prompts based on language
+            system_prompts = {
+                "zh": """你是一位专业的技术博主，擅长将学术论文转化为通俗易懂的技术博客。请用中文进行回复。
 
-            # Define prompts based on language
-            prompts = {
-                "zh": {
-                    "system": "你是一位专业的技术博主，擅长将学术论文转化为通俗易懂的技术博客。请用中文进行回复。请尽可能多详细的描述这篇文章内容。同时请根据图片的描述以及论文内容，将图片安排到合适的位置，并且添加对应段落来描述图片。",
-                    "style": "保持技术准确性的同时确保可读性，突出创新点和实际应用价值。",
-                },
-                "en": {
-                    "system": "You are a professional tech blogger who excels at transforming academic papers into accessible technical blog posts.",
-                    "style": "Maintain technical accuracy while ensuring readability, highlighting innovations and practical value.",
-                },
+请按照以下要求生成博客：
+1. 生成博客内容应该尽可能详细，覆盖核心创新点
+2. 保留图片描述，原文中的，并保留markdown格式图片语法 如： ![](image_xx.png)，并将图片放在合适的位置
+3. 博客应包含标题、内容和总结
+4. 博客格式应为Markdown
+5. 博客标题应以"# "开头
+6. 总结部分应以"## 总结"开头
+7. 保持技术准确性的同时确保可读性，突出创新点和实际应用价值""",
+                
+                "en": """You are a professional tech blogger who excels at transforming academic papers into accessible technical blog posts.
+
+Please generate a blog post following these requirements:
+1. The blog content should be as detailed as possible, covering the core innovations
+2. Preserve image descriptions from the original paper and maintain markdown image syntax like: ![](image_xx.png), placing images in appropriate locations
+3. The blog should include a title, content, and summary
+4. The blog format should be Markdown
+5. The blog title should start with "# "
+6. The summary section should start with "## Summary"
+7. Maintain technical accuracy while ensuring readability, highlighting innovations and practical value"""
             }
-
-            # Generate blog content
+            
+            # Generate blog content in one shot
             messages = [
-                {"role": "system", "content": prompts[lang]["system"]},
+                {"role": "system", "content": system_prompts[lang]},
                 {
                     "role": "user",
-                    "content": f"""Write a technical blog post about this paper freely:
-{prompts[lang]["style"]}
+                    "content": f"""Here is the academic paper to transform into a blog post:
 
 Available Images:
-{self._format_images(images)}
+{formatted_images}
 
 Paper content:
-{text_content[:2000]}""",
+{text_content}"""
                 },
             ]
 
             blog_content = await self._generate_completion(messages)
-
-            # Get title and summary
+            
+            # Extract title from the generated content
             lines = blog_content.split("\n")
             title = next(
                 (line.replace("# ", "") for line in lines if line.startswith("# ")),
                 "Untitled",
             )
-
-            # Translate title
-            translated_title = await self.translate_title(text_content, language)
-
-            # Extract summary
-            summary_marker = "## Summary" if lang == "en" else "## 总结"
-            summary = "No summary available" if lang == "en" else "暂无总结"
-
-            summary_start = blog_content.find(summary_marker)
-            if summary_start != -1:
-                summary_end = blog_content.find("##", summary_start + 2)
-                summary = (
-                    blog_content[summary_start:summary_end].strip()
-                    if summary_end != -1
-                    else blog_content[summary_start:].strip()
-                )
-
+            
             return {
-                "title": translated_title,
+                "title": title,
                 "content": blog_content,
-                "summary": summary,
-                "tags": [],
+                "summary": "",  # No separate summary extraction needed as it's part of the blog content
+                "tags": []
             }
 
         except Exception as e:
-            print(f"Error in generate_blog: {str(e)}")
+            print(f"Error in generate_blog_post: {str(e)}")
             raise
 
     def _format_images(self, images: List[ImageInfo]) -> str:
@@ -131,11 +133,3 @@ Paper content:
                 f"Use exactly this markdown to insert the image: ![{img.caption}](http://localhost:8000/{relative_path})"
             )
         return "\n\n".join(formatted_images)
-
-    async def generate_blog_post(
-        self,
-        text_content: str,
-        target_language: str = "en",
-        image_info: List[ImageInfo] = [],
-    ):
-        return await self.generate_blog(text_content, target_language, image_info)
