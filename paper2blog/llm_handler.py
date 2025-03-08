@@ -1,4 +1,5 @@
 import os
+import logging
 from typing import List, Dict
 from openai import AsyncOpenAI
 from .types import ImageInfo
@@ -6,6 +7,13 @@ from .types import ImageInfo
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(
+    filename='llm_dialog.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s'
+)
 
 
 class LLMHandler:
@@ -17,12 +25,25 @@ class LLMHandler:
     async def _generate_completion(
         self, messages: List[Dict[str, str]], temperature: float = 0.7
     ) -> str:
+        # Log the input messages
+        logging.info("Input messages to LLM:")
+        for msg in messages:
+            logging.info(f"Role: {msg['role']}")
+            logging.info(f"Content: {msg['content']}\n")
+
         completion = await self.client.chat.completions.create(
             model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
             messages=messages,
             temperature=temperature,
         )
-        return completion.choices[0].message.content
+        response = completion.choices[0].message.content
+
+        # Log the LLM response
+        logging.info("LLM Response:")
+        logging.info(f"{response}\n")
+        logging.info("-" * 80 + "\n")
+
+        return response
 
     async def translate_title(self, text_content: str, target_language: str) -> str:
         """Translate the title of the paper without modifying its content."""
@@ -64,15 +85,34 @@ Just return the translated title without any additional text or formatting.""",
             system_prompts = {
                 "zh": """你是一位专业的技术博主，擅长将学术论文转化为通俗易懂的技术博客。请用中文进行回复。
 
-请按照以下要求生成博客：
-1. 生成博客内容应该尽可能详细，覆盖核心创新点
-2. 保留图片描述，原文中的，并保留markdown格式图片语法 如： ![](image_xx.png)，并将图片放在合适的位置
-3. 博客应包含标题、内容和总结
-4. 博客格式应为Markdown
-5. 博客标题应以"# "开头
-6. 总结部分应以"## 总结"开头
-7. 保持技术准确性的同时确保可读性，突出创新点和实际应用价值""",
-                
+# 学术博客生成指令
+
+## 核心要求
+1. **适当的口语化表达**：
+- 任务描述：解析arXiv上关于LLM（大语言模型）和CS（计算机科学）的论文，生成一篇图文混排的学术博客。博客需贴近人类写作习惯，清晰传达论文核心内容，并在合适位置插入图片。
+- 不要使用"你"、"我们"等人称代词建立对话感。博客内容的立场是作为一个第三方论文阅读者来描述，如果有偏主观的见解，请使用"笔者认为xxx"
+- 需要关注核心的架构图，或者算法介绍图，并在文中使用一定篇幅进行讲解和引用，如"如图N所示，本算法首先。。。 然后。。。"
+- 博客应包含标题、内容和总结， 其中内容部分可以根据需求分多个章节。# 是第一章节， ## 代表二级目录
+
+2. 图文配合规则
+- 每张图片需独占一行，格式为 ![图N: 描述。。。](图片路径不用修改)，其中N为图片编号。
+- 图片描述需自然融入上下文，例如：
+    "如图所示figure:fig1，该方法的架构分为三个主要模块..."
+    "实验结果figure:fig3显示，该方法在准确率上显著优于基线模型..."
+- 每张出现的图片都需要有对应的文字去描述，最起码有一段内容。
+
+## 格式规范
+
+1. 段落结构：
+- 每章节3-5段，每段不超过150字
+- 段落间用空行分隔
+- 重点语句用**加粗**强调 
+- 博客格式应为Markdown
+
+2. 禁用内容：
+- 专业术语缩写（首次出现需括号解释）
+
+""",            
                 "en": """You are a professional tech blogger who excels at transforming academic papers into accessible technical blog posts.
 
 Please generate a blog post following these requirements:
@@ -96,7 +136,7 @@ Available Images:
 {formatted_images}
 
 Paper content:
-{text_content}"""
+{text_content[:12000]}"""
                 },
             ]
 
@@ -117,7 +157,7 @@ Paper content:
             }
 
         except Exception as e:
-            print(f"Error in generate_blog_post: {str(e)}")
+            logging.error(f"Error in generate_blog_post: {str(e)}")
             raise
 
     def _format_images(self, images: List[ImageInfo]) -> str:
