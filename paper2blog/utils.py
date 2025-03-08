@@ -8,6 +8,30 @@ from typing import Tuple, List
 import json
 from .models import ImageInfo
 from .vlm_handler import VLMHandler
+import re
+
+def format_image_markdown(content: str) -> str:
+    """
+    Format markdown image references by combining the image and caption into a single line.
+    
+    Args:
+        content (str): Input markdown content
+        
+    Returns:
+        str: Formatted markdown content
+    """
+    # Pattern to match image reference and its following caption
+    pattern = r'!\[\]\(([^)]+)\)\s*\n\s*<span[^>]*>.*?</span>(.+?)(?=\n\n|$)'
+    
+    def replace_match(match):
+        img_path = match.group(1)
+        caption = match.group(2).strip()
+        return f'![{caption}]({img_path})'
+    
+    # Replace all matches in the content
+    formatted_content = re.sub(pattern, replace_match, content, flags=re.DOTALL)
+    return formatted_content
+
 
 async def extract_content_from_pdf(
     pdf_path: str,
@@ -46,6 +70,7 @@ async def extract_content_from_pdf(
         text_content = ""
         if extract_text:
             text_content = result.get("output", "")
+            text_content = format_image_markdown(text_content)
 
         # Process images if requested
         images = []

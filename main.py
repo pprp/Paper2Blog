@@ -11,6 +11,7 @@ from datetime import datetime
 import os
 import uuid
 from pathlib import Path
+import json
 
 
 # Configure logging
@@ -30,6 +31,10 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger(__name__)
+
+# Create base directory for all papers
+PAPERS_BASE_DIR = Path("/home/dongpeijie/workspace/Paper2Blog/tmp")
+PAPERS_BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 # Create temporary upload directory
 UPLOAD_DIR = Path("/home/dongpeijie/workspace/Paper2Blog/tmp/uploaded_files")
@@ -86,30 +91,48 @@ async def convert_paper(
 
         if file:
             try:
-                # Generate a unique filename
-                unique_id = str(uuid.uuid4())
-                original_extension = Path(file.filename).suffix
-                temp_filepath = UPLOAD_DIR / f"{unique_id}{original_extension}"
-
-                logger.info(f"Saving uploaded file to: {temp_filepath}")
+                # Generate paper_id from filename without extension
+                paper_id = Path(file.filename).stem
+                # Create paper-specific directory structure
+                paper_dir = PAPERS_BASE_DIR / paper_id
+                figures_dir = paper_dir / "figures"
+                paper_dir.mkdir(parents=True, exist_ok=True)
+                figures_dir.mkdir(parents=True, exist_ok=True)
 
                 # Save the uploaded file
+                original_extension = Path(file.filename).suffix
+                paper_filepath = paper_dir / f"{paper_id}{original_extension}"
+                
+                logger.info(f"Saving uploaded file to: {paper_filepath}")
                 content = await file.read()
-                with open(temp_filepath, "wb") as temp_file:
-                    temp_file.write(content)
+                with open(paper_filepath, "wb") as paper_file:
+                    paper_file.write(content)
 
-                logger.info(f"Processing PDF file: {temp_filepath}")
+                logger.info(f"Processing PDF file: {paper_filepath}")
                 result: ConversionResponse = await converter.convert_from_pdf(
-                    str(temp_filepath), language
+                    str(paper_filepath), language
                 )
                 logger.info("Successfully converted PDF file")
 
-                # Save the markdown content
-                md_filename = f"{uuid.uuid4()}.md"
-                md_filepath = SAVED_MD_DIR / md_filename
+                # Save the markdown content and metadata
+                md_filepath = paper_dir / f"{paper_id}.md"
                 with open(md_filepath, "w") as md_file:
                     md_file.write(result.content)
-                logger.info(f"Markdown saved to: {md_filepath}")
+                
+                # Save metadata
+                metadata = {
+                    "paper_id": paper_id,
+                    "original_filename": file.filename,
+                    "language": language,
+                    "conversion_date": datetime.now().isoformat(),
+                    "figures": result.figures if hasattr(result, 'figures') else []
+                }
+                
+                metadata_filepath = paper_dir / "metadata.json"
+                with open(metadata_filepath, "w") as metadata_file:
+                    json.dump(metadata, metadata_file, indent=2)
+                
+                logger.info(f"Paper content and metadata saved in: {paper_dir}")
 
             except Exception as e:
                 logger.error(f"Error processing PDF file: {str(e)}")

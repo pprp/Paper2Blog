@@ -1,7 +1,7 @@
 import os
 from typing import List, Dict
 from openai import AsyncOpenAI
-from .models import ImageInfo
+from .types import ImageInfo
 
 from dotenv import load_dotenv
 

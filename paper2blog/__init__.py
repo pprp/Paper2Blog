@@ -11,7 +11,7 @@ This package provides tools to:
 __version__ = "0.1.0"
 
 from .converter import PaperConverter
-from .models import ConversionResponse, ImageInfo, BlogPost
+from .types import ConversionResponse, ImageInfo, BlogPost
 from .utils import extract_content_from_pdf
 
 __all__ = [

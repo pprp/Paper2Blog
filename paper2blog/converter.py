@@ -3,7 +3,7 @@ import os
 from bs4 import BeautifulSoup
 import requests
 from .llm_handler import LLMHandler
-from .models import ConversionResponse, ImageInfo, BlogPost
+from .types import ConversionResponse, ImageInfo, BlogPost
 from .utils import extract_content_from_pdf, download_image
 
 

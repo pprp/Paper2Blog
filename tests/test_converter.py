@@ -5,7 +5,7 @@ from PIL import Image
 import io
 from unittest.mock import patch, AsyncMock
 from paper2blog.converter import PaperConverter
-from paper2blog.models import ConversionResponse, ImageInfo, BlogPost
+from paper2blog.types import ConversionResponse, ImageInfo, BlogPost
 from paper2blog.utils import extract_content_from_pdf
 from dotenv import load_dotenv
 
