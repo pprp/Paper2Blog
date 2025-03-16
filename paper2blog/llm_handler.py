@@ -57,7 +57,7 @@ class LLMHandler:
                 "content": f"""Please translate only the title of this paper to {target_language}. Keep the translation accurate and faithful to the original meaning.
 
 Paper content:
-{text_content[:1000]}
+{text_content[:1000] if len(text_content) > 1000 else text_content}
 
 Output format:
 Just return the translated title without any additional text or formatting.""",
