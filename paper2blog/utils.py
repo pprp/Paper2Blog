@@ -6,7 +6,7 @@ import numpy as np
 from PIL import Image
 from typing import Tuple, List
 import json
-from .types import ImageInfo
+from .model_types import ImageInfo
 from .vlm_handler import VLMHandler
 import re
 

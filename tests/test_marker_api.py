@@ -11,6 +11,7 @@ post_data = {
 
 _json = requests.post("http://localhost:8024/marker", data=json.dumps(post_data)).json()
 print(_json.keys())
+breakpoint()
 # dict_keys(["format", "output", "images", "metadata", "success"])
 
 

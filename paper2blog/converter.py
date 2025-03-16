@@ -2,9 +2,8 @@ import io
 import os
 from bs4 import BeautifulSoup
 import requests
-from .llm_handler import LLMHandler
-from .types import ConversionResponse, ImageInfo, BlogPost
-from .utils import extract_content_from_pdf, download_image
+from paper2blog.model_types import ConversionResponse, ImageInfo, BlogPost
+from paper2blog.utils import extract_content_from_pdf, download_image
 
 
 class PaperConverter:

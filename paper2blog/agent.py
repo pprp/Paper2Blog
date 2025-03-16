@@ -4,12 +4,13 @@ from typing import List, Dict, Optional
 from langchain.agents import Tool, AgentExecutor, initialize_agent
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from langchain.llms import OpenAI
-from .types import ImageInfo, BlogPost
-from .utils import extract_content_from_pdf
-from .llm_handler import LLMHandler
+from langchain_openai import OpenAI 
+from paper2blog.model_types import ImageInfo, BlogPost
+from paper2blog.utils import extract_content_from_pdf
+from paper2blog.llm_handler import LLMHandler
+import re
+from pathlib import Path
 
-# 配置日志
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -17,35 +18,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class BlogGenerationAgent:
-    """使用LangChain Agent框架生成博客内容的代理类"""
-
     def __init__(self, api_key: Optional[str] = None, temperature: float = 0.7):
-        """初始化博客生成代理
-
-        Args:
-            api_key: OpenAI API密钥，如果为None则从环境变量获取
-            temperature: 生成文本的随机性，0-1之间，越高越随机
-        """
-        # 初始化LLM
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("需要提供OpenAI API密钥")
 
         self.llm = OpenAI(
-            temperature=temperature, max_tokens=1000, api_key=self.api_key
+            temperature=temperature, max_tokens=1000, api_key=self.api_key, base_url=os.getenv("OPENAI_API_BASE")
         )
         self.llm_handler = LLMHandler()
 
-        # 定义生成博客段落的Prompt模板
         self.blog_section_prompt = PromptTemplate(
             input_variables=["text", "context", "style_guide"],
             template="""你是一位专业的技术博主，擅长将学术论文转化为通俗易懂的技术博客。请用中文进行回复。
 
 请将以下论文片段转换为博客段落，遵循以下要求：
 
-1. **内容**：将论文片段转化为详细的博客段落，至少300字。用简单的语言和生动的例子解释核心概念。
+1. **内容**：将论文片段转化为详细的博客段落，至少3000字。
 2. **风格**：使用{style_guide}的语调，保持自然、人性化的表达。避免过于学术化的术语，除非有解释。
 3. **图片**：如果文本提到图片（如"图1"），在适当位置插入[Figure X]作为占位符。
 4. **上下文**：使用以下上下文确保逻辑流畅，避免重复：{context}
@@ -56,25 +48,22 @@ class BlogGenerationAgent:
 博客段落：""",
         )
 
-        # 创建LLMChain用于生成博客段落
         self.blog_section_chain = LLMChain(
             llm=self.llm, prompt=self.blog_section_prompt
         )
 
-        # 定义Tool，封装生成博客段落的功能
         self.generate_section_tool = Tool(
             name="生成博客段落",
             func=lambda inputs: self.blog_section_chain.run(
-                {
-                    "text": inputs["text"],
-                    "context": inputs["context"],
-                    "style_guide": inputs.get("style_guide", "友好且对话式"),
-                }
+                text=inputs.get("text", inputs) if isinstance(inputs, dict) else inputs,
+                context=inputs.get("context", "") if isinstance(inputs, dict) else "",
+                style_guide=inputs.get("style_guide", "友好且对话式") if isinstance(inputs, dict) else "友好且对话式"
             ),
-            description="根据论文片段生成详细的博客段落，确保清晰度和吸引力。",
+            description="""根据论文片段生成详细的博客段落。
+            输入格式可以是字符串（论文片段）或字典（包含 text, context, style_guide）。
+            将生成一个详细的、通俗易懂的博客段落。""",
         )
 
-        # 初始化Agent
         self.agent = initialize_agent(
             tools=[self.generate_section_tool],
             llm=self.llm,
@@ -85,126 +74,189 @@ class BlogGenerationAgent:
     async def generate_blog_with_agent(
         self, text_chunks: List[str], image_info: List[ImageInfo]
     ) -> str:
-        """使用Agent分段生成博客内容。
-
-        Args:
-            text_chunks: 分块的论文文本。
-            image_info: 包含图片信息的列表。
-
-        Returns:
-            完整的博客内容。
-        """
         blog_sections = []
-        previous_context = (
-            "这篇博客介绍了一篇关于大型语言模型(LLMs)的论文。"  # 初始上下文
-        )
+        previous_context = "这篇博客介绍了一篇关于大型语言模型(LLMs)的论文。"
 
         for i, chunk in enumerate(text_chunks):
             logger.info(f"正在生成第{i+1}段...")
-            # 构建Agent输入
-            agent_input = {
-                "text": chunk,
-                "context": previous_context,
-                "style_guide": "友好且对话式",  # 可动态调整
-            }
-
-            # 调用Agent生成当前段落
             try:
-                section = self.agent.run(f"根据以下输入生成博客段落: {agent_input}")
-                blog_sections.append(section)
-
-                # 更新上下文：提取当前段落的核心信息，避免过长
-                previous_context = (
-                    f"上一段讨论了: {section[:100]}..."
-                    if len(section) > 100
-                    else section
-                )
+                # 直接传递文本内容作为输入
+                section = self.agent.run(chunk)
+                logger.info(f"第{i+1}段生成完成")
+                if section:
+                    blog_sections.append(section)
+                    previous_context = (
+                        f"上一段讨论了: {section[:100]}..."
+                        if len(section) > 100
+                        else section
+                    )
+                else:
+                    logger.error(f"第{i+1}段生成失败：返回内容为空")
             except Exception as e:
-                logger.error(f"生成段落{i+1}时出错: {str(e)}")
-                blog_sections.append(f"[生成此段落时出错: {str(e)}]")
+                logger.error(f"生成第{i+1}段时发生错误: {str(e)}")
+                continue
 
-        return "\n\n".join(blog_sections)  # 用换行分隔段落，便于阅读
+        if not blog_sections:
+            raise ValueError("没有成功生成任何博客内容")
+
+        return "\n\n".join(blog_sections)
 
     async def generate_blog(
         self, pdf_path: str, target_language: str = "zh"
     ) -> BlogPost:
-        """生成完整的图文混排博客。
+        logger.info(f"从PDF提取内容: {pdf_path}")
+        text_content, images = await extract_content_from_pdf(pdf_path)
 
-        Args:
-            pdf_path: PDF文件路径。
-            target_language: 目标语言，默认为中文。
+        text_chunks = self._split_text(text_content)
 
-        Returns:
-            包含博客标题和内容的BlogPost对象。
-        """
-        try:
-            # 从PDF提取内容
-            logger.info(f"从PDF提取内容: {pdf_path}")
-            text_content, images = await extract_content_from_pdf(pdf_path)
+        logger.info("使用Agent生成博客内容")
+        full_blog_text = await self.generate_blog_with_agent(list(text_chunks.values()), images)
 
-            # 将提取的文本分块
-            text_chunks = self._split_text(text_content)
+        for img in images:
+            placeholder = f"[Figure {img.caption.split(':')[0] if ':' in img.caption else img.caption}]"
+            full_blog_text = full_blog_text.replace(placeholder, img.markdown)
 
-            # 使用Agent生成博客内容
-            logger.info("使用Agent生成博客内容")
-            full_blog_text = await self.generate_blog_with_agent(text_chunks, images)
+        logger.info("生成博客标题")
+        title = await self.llm_handler.translate_title(
+            text_content, target_language
+        )
 
-            # 处理图片引用
-            for img in images:
-                # 替换图片引用
-                placeholder = f"[Figure {img.caption.split(':')[0] if ':' in img.caption else img.caption}]"
-                full_blog_text = full_blog_text.replace(placeholder, img.markdown)
+        return BlogPost(title=title, content=full_blog_text)
 
-            # 生成标题
-            logger.info("生成博客标题")
-            title = await self.llm_handler.translate_title(
-                text_content, target_language
-            )
+    def _split_text(self, text: str) -> Dict[str, str]:
+        sections = {}
+        lines = text.split("\n")
+        current_section = None
+        current_content = []
 
-            return BlogPost(title=title, content=full_blog_text)
+        # 定义章节映射
+        section_mappings = {
+            'abstract': 'Abstract',
+            'summary': 'Abstract',
+            'introduction': 'Introduction',
+            'motivation': 'Introduction',
+            'related work': 'Related Work',
+            'background': 'Related Work',
+            'methodology': 'Method',
+            'method': 'Method',
+            'approach': 'Method',
+            'framework': 'Method',
+            'evaluation': 'Experiments',
+            'experiment': 'Experiments',
+            'experiments': 'Experiments',
+            'result': 'Experiments',
+            'results': 'Experiments',
+            'implementation': 'Experiments',
+            'discussion': 'Conclusion',
+            'conclusion': 'Conclusion'
+        }
 
-        except Exception as e:
-            logger.error(f"生成博客时出错: {str(e)}")
-            raise
+        # 结束章节
+        stop_sections = {'references', 'appendix', 'acknowledgements', 'acknowledgments', 'bibliography'}
 
-    def _split_text(self, text: str, chunk_size: int = 1000) -> List[str]:
-        """将文本分割成适合处理的块。
+        def is_section_header(line: str) -> bool:
+            # 如果行太长，可能不是标题
+            if len(line) > 100:
+                return False
+            # 如果包含太多标点符号，可能不是标题
+            if len(re.findall(r'[,.;:]', line)) > 2:
+                return False
+            # 如果有多个换行，可能不是标题
+            if line.count('\n') > 1:
+                return False
+            return True
 
-        Args:
-            text: 要分割的文本。
-            chunk_size: 每块的大致字符数。
+        def normalize_line(line: str) -> str:
+            # 移除数字编号
+            clean = re.sub(r'^\d+[\.\)]\s*', '', line)
+            # 移除特殊字符
+            clean = re.sub(r'^[#\s]+', '', clean)
+            # 转换为小写并去除首尾空格
+            return clean.lower().strip()
 
-        Returns:
-            分割后的文本块列表。
-        """
-        # 按段落分割
-        paragraphs = text.split("\n\n")
-        chunks = []
-        current_chunk = ""
+        def find_matching_section(normalized: str) -> str:
+            # 先尝试完全匹配
+            for key, section in section_mappings.items():
+                if normalized == key:
+                    logger.info(f"Exact match: '{normalized}' -> {section}")
+                    return section
 
-        for para in paragraphs:
-            if len(current_chunk) + len(para) <= chunk_size:
-                current_chunk += para + "\n\n"
-            else:
-                if current_chunk:
-                    chunks.append(current_chunk.strip())
-                current_chunk = para + "\n\n"
+            # 然后尝试关键词匹配
+            for key, section in section_mappings.items():
+                # 对于特殊关键词，使用更宽松的匹配
+                if key in ['methodology', 'evaluation', 'method', 'experiment']:
+                    if key in normalized:
+                        logger.info(f"Special keyword match: '{key}' in '{normalized}' -> {section}")
+                        return section
+                # 对于其他关键词
+                else:
+                    # 如果是短词，使用单词边界匹配
+                    if len(key) <= 4:
+                        if re.search(r'\b' + re.escape(key) + r'\b', normalized):
+                            logger.info(f"Word boundary match: '{key}' in '{normalized}' -> {section}")
+                            return section
+                    # 如果是长词，使用更严格的匹配
+                    elif normalized.startswith(key):
+                        logger.info(f"Prefix match: '{key}' in '{normalized}' -> {section}")
+                        return section
+            return None
 
-        if current_chunk:
-            chunks.append(current_chunk.strip())
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
 
-        return chunks
+            original_line = line
+            normalized = normalize_line(line)
+            logger.info(f"Processing line: '{line}' -> normalized: '{normalized}'")
 
+            # 检查是否是结束章节
+            if any(stop in normalized for stop in stop_sections):
+                logger.info(f"Found stop section: {normalized}")
+                break
 
-# 示例调用
+            # 如果看起来像章节标题，尝试匹配
+            if is_section_header(line):
+                matched_section = find_matching_section(normalized)
+                if matched_section:
+                    # 保存之前的章节内容
+                    if current_section and current_content:
+                        content = '\n'.join(current_content).strip()
+                        if content:  # 只保存非空内容
+                            sections[current_section] = content
+                            logger.info(f"Saved content for section {current_section}: {content[:50]}...")
+                    current_section = matched_section
+                    current_content = []
+                    logger.info(f"Starting new section: {matched_section}")
+                elif current_section:
+                    current_content.append(original_line)
+                    logger.info(f"Added line to section {current_section}: {original_line[:50]}...")
+            elif current_section:
+                current_content.append(original_line)
+                logger.info(f"Added line to section {current_section}: {original_line[:50]}...")
+
+        # 保存最后一个章节
+        if current_section and current_content:
+            content = '\n'.join(current_content).strip()
+            if content:  # 只保存非空内容
+                sections[current_section] = content
+                logger.info(f"Saved content for final section {current_section}: {content[:50]}...")
+
+        logger.info(f"Final sections found: {list(sections.keys())}")
+        return sections
+
 if __name__ == "__main__":
     import asyncio
 
     async def main():
         agent = BlogGenerationAgent()
-        pdf_path = "path/to/your/pdf.pdf"
+        pdf_path = "/home/dongpeijie/workspace/LLMToolkit/difypaper/sent/2502_08235/2502_08235.pdf"
         blog_post = await agent.generate_blog(pdf_path)
-        print("\n生成的博客内容:\n")
-        print(f"# {blog_post.title}\n\n{blog_post.content}")
+        output_dir = Path("./output_md")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / f"{blog_post.title.replace(' ', '_')}.md"
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(f"# {blog_post.title}\n\n{blog_post.content}")
+        print(f"\n博客内容已保存到: {output_file}\n")
 
     asyncio.run(main())

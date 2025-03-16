@@ -2,7 +2,7 @@ import os
 import logging
 from typing import List, Dict
 from openai import AsyncOpenAI
-from .types import ImageInfo
+from paper2blog.model_types import ImageInfo
 
 from dotenv import load_dotenv
 

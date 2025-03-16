@@ -10,9 +10,9 @@ This package provides tools to:
 
 __version__ = "0.1.0"
 
-from .converter import PaperConverter
-from .types import ConversionResponse, ImageInfo, BlogPost
-from .utils import extract_content_from_pdf
+from paper2blog.converter import PaperConverter
+from paper2blog.model_types import ConversionResponse, ImageInfo, BlogPost
+from paper2blog.utils import extract_content_from_pdf
 
 __all__ = [
     "PaperConverter",
